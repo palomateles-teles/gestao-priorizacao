@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRIORIZAÇÃO SQUAD GESTÃO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; height: 100vh; overflow: hidden; }
+        .boti-green { color: #005f3f; }
+        .boti-bg { background-color: #005f3f; }
+        .phone-container { 
+            width: 260px; height: 530px; background: #000; border-radius: 40px; padding: 10px; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 2px solid #333; position: relative;
+        }
+        .phone-screen { 
+            width: 100%; height: 100%; background: #fff; border-radius: 32px; 
+            overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; position: relative;
+        }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .card-active { border-color: #005f3f !important; background-color: #f0fdf4 !important; border-left-width: 8px !important; }
+        .drop-zone-active { background-color: rgba(0, 95, 63, 0.05); outline: 2px dashed #005f3f; border-radius: 2rem; }
+        .animate-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .dragging { opacity: 0.2; cursor: grabbing; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useCallback } = React;
+
+        const Icon = ({ name, color = "currentColor", size = 16, className = "" }) => {
+            const icons = {
+                lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></g>,
+                zap: <g><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></g>,
+                alert: <g><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></g>,
+                user: <g><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></g>,
+                arrow: <g><path d="M19 12H5M12 19l-7-7 7-7" /></g>,
+                check: <g><path d="M20 6L9 17l-5-5" /></g>,
+                send: <g><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></g>,
+                calc: <g><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></g>,
+                help: <g><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" /></g>,
+                edit: <g><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></g>,
+                figma: <g><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H12v5H7.5A2.5 2.5 0 0 1 5 5.5z"/><path d="M12 3h4.5A2.5 2.5 0 0 1 19 5.5 2.5 2.5 0 0 1 16.5 8H12V3z"/><path d="M5 12.5A2.5 2.5 0 0 1 7.5 10H12v5H7.5A2.5 2.5 0 0 1 5 12.5z"/><path d="M5 19.5A2.5 2.5 0 0 1 7.5 17H12v2.5a2.5 2.5 0 0 1-5 0z"/><path d="M12 10h4.5A2.5 2.5 0 0 1 19 12.5 2.5 2.5 0 0 1 16.5 15H12v-5z"/></g>,
+                grip: <g><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></g>,
+                wallet: <g><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M22 10H18a2 2 0 0 0 0 4h4"/></g>,
+                qr: <g><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="7" y="7" width="1" height="1"/><rect x="16" y="7" width="1" height="1"/><rect x="7" y="16" width="1" height="1"/></g>
+            };
+            return (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`inline-block ${className}`}>
+                    {icons[name] || <circle cx="12" cy="12" r="10" />}
+                </svg>
+            );
+        };
+
+        const App = () => {
+            const [selectedId, setSelectedId] = useState(null);
+            const [overColumn, setOverColumn] = useState(null);
+            const [editingId, setEditingId] = useState(null);
+            const [draggedId, setDraggedId] = useState(null);
+
+            // Estado consolidado (11 + 2 itens estratégicos)
+            const [data, setData] = useState([
+                { id: 12, title: "Hub de Gestão", priority: "P1", responsible: "PM", status: "Estratégico", dep: "Nenhuma", data: "Visibilidade RE", todo: "Analisar visibilidade da carteira no ícone mais acessado.", type: "gestao_btn", figmaUrl: "" },
+                { id: 13, title: "Integração Home", priority: "P1", responsible: "PM", status: "Estratégico", dep: "Nenhuma", data: "Conversão Direta", todo: "Alinhamento p/ inserir card da carteira na Home principal.", type: "home_collect", figmaUrl: "" },
+                { id: 2, title: "Facelifting Boletos", priority: "P0", responsible: "DEV", status: "Pronto", dep: "Nenhuma", data: "15% erro de data", todo: "Implementar nova jornada visual de confirmação.", type: "confirm_pay", figmaUrl: "https://www.figma.com/design/cqkFleWXttaWS34L5T6cMr/Carteira-Digital?node-id=11257-14847&t=dBNZjgehFcxb274j-4" },
+                { id: 8, title: "Central de Notificações", priority: "P0", responsible: "DEV", status: "Pronto", dep: "Nenhuma", data: "Lembretes", todo: "Codar carrossel de avisos dinâmicos na Home.", type: "notif_center", figmaUrl: "https://www.figma.com/design/cqkFleWXttaWS34L5T6cMr/Carteira-Digital?node-id=11774-7416&t=dBNZjgehFcxb274j-4" },
+                { id: 4, title: "Melhorar Compartilhar Pix", priority: "P0", responsible: "PD", status: "Discovery", dep: "Nenhuma", data: "53% manual", todo: "Refinar UX da tela de sucesso para facilitar envio.", type: "pix_flow", figmaUrl: "" },
+                { id: 3, title: "Cobrar Cliente (Gestão)", priority: "P0", responsible: "PD", status: "Discovery", dep: "Dep: Fluxo Pix (#4)", data: "60% atraso", todo: "Inserir CTA estratégico no Hub de Clientes.", type: "gestao_btn", figmaUrl: "" },
+                { id: 1, title: "CTA Pagar c/ Carteira", priority: "P1", responsible: "PM", status: "Alinhamento", dep: "Bloqueio: Time Pedidos", data: "55% cash-out", todo: "Alinhar teste A/B/C com o time de Pedidos.", type: "pay_detail", figmaUrl: "" },
+                { id: 5, title: "CTA Cobrar (Home)", priority: "P1", responsible: "PD", status: "Discovery", dep: "Dep: Fluxo Pix (#4)", data: "53% manual", todo: "Inserir botão primário de cobrança na Home.", type: "home_collect", figmaUrl: "" },
+                { id: 10, title: "Meta de Pagamento", priority: "P1", responsible: "PD", status: "Discovery", dep: "Pós Facelifting (#2)", data: "Planejamento", todo: "Componente de barra de progresso visual.", type: "progress", figmaUrl: "" },
+                { id: 6, title: "Listagem de Boletos", priority: "P2", responsible: "DEV", status: "BLOQUEADO", dep: "Dependência Backend", data: "Gestão Finan.", todo: "Aguardando endpoints de listagem real.", type: "bill_list", figmaUrl: "https://www.figma.com/design/cqkFleWXttaWS34L5T6cMr/Carteira-Digital?node-id=11257-14611&t=dBNZjgehFcxb274j-4" },
+                { id: 9, title: "Dicas Ed. Financeira", priority: "P2", responsible: "PM", status: "Definição", dep: "Definir Conteúdo", data: "19% mistura", todo: "Definir textos das pílulas de conhecimento.", type: "edu_tips", figmaUrl: "" },
+                { id: 11, title: "Calculadora Reinvestimento", priority: "P2", responsible: "PD", status: "Discovery", dep: "Refinar Rascunho", data: "19% mistura", todo: "Evoluir simulador para UI final do app.", type: "calc", figmaUrl: "" },
+                { id: 7, title: "Modais de Feedback", priority: "P3", responsible: "DEV", status: "BLOQUEADO", dep: "Dependência Backend", data: "NPS RE", todo: "Integrar infra de salvamento de notas NPS.", type: "feedback", figmaUrl: "https://www.figma.com/design/cqkFleWXttaWS34L5T6cMr/Carteira-Digital?node-id=11428-97624&t=dBNZjgehFcxb274j-4" }
+            ]);
+
+            const selected = useMemo(() => data.find(o => o.id === selectedId), [selectedId, data]);
+
+            // Drag and Drop Logic para Reordenação e Troca de Coluna
+            const onDragStart = (e, id) => {
+                setDraggedId(id);
+                e.dataTransfer.setData("text/plain", id);
+                e.currentTarget.classList.add('dragging');
+            };
+
+            const onDragEnd = (e) => {
+                e.currentTarget.classList.remove('dragging');
+                setDraggedId(null);
+                setOverColumn(null);
+            };
+
+            const onDragOver = (e, column, targetId = null) => {
+                e.preventDefault();
+                if (overColumn !== column) setOverColumn(column);
+            };
+
+            const onDrop = (e, targetResponsible, targetId = null) => {
+                e.preventDefault();
+                const id = parseInt(e.dataTransfer.getData("text/plain"));
+                if (isNaN(id)) return;
+
+                const newData = [...data];
+                const draggedItem = newData.find(item => item.id === id);
+                const draggedIndex = newData.indexOf(draggedItem);
+                
+                // Remove o item da posição original
+                newData.splice(draggedIndex, 1);
+                
+                // Atualiza o responsável e status sugerido
+                const isBackendBlocked = draggedItem.dep && draggedItem.dep.toLowerCase().includes("backend");
+                draggedItem.responsible = targetResponsible;
+                draggedItem.status = targetResponsible === "DEV" ? (isBackendBlocked ? "BLOQUEADO" : "Pronto") : "Discovery";
+
+                // Se houver um targetId, insere o card naquela posição (reordenação)
+                if (targetId) {
+                    const targetIndex = newData.findIndex(item => item.id === targetId);
+                    newData.splice(targetIndex, 0, draggedItem);
+                } else {
+                    // Senão, joga para o fim da coluna
+                    newData.push(draggedItem);
+                }
+
+                setData(newData);
+                setOverColumn(null);
+            };
+
+            const handleUpdateField = (id, field, value) => {
+                setData(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+            };
+
+            // Protótipo Discovery #4 baseado na imagem enviada
+            const PixFlowDiscovery = () => (
+                <div className="flex-1 bg-[#f9fafb] flex flex-col items-center p-6 animate-in">
+                    <div className="w-full text-center space-y-4 mb-6">
+                        <h3 className="text-xl font-bold text-slate-800">Pronto!</h3>
+                        <p className="text-sm font-bold text-slate-700 leading-tight">A cobrança via Pix foi criada com sucesso.</p>
+                        <p className="text-[10px] text-slate-500 leading-relaxed px-4">Mostre o QR Code ou compartilhe o código Pix com quem vai pagar.</p>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center mb-6">
+                        <div className="w-36 h-36 bg-white border border-slate-100 flex items-center justify-center mb-4">
+                            <Icon name="qr" size={120} color="#334155" />
+                        </div>
+                        <button className="flex items-center gap-2 text-[#005f3f] font-bold text-[11px] uppercase border border-slate-200 px-4 py-2 rounded-xl">
+                            <Icon name="check" size={12}/> Copiar código Pix
+                        </button>
+                    </div>
+
+                    <div className="w-full space-y-4 px-2 text-left">
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-bold text-slate-400">Chave Pix:</p>
+                            <p className="text-[10px] font-mono text-slate-500 break-all leading-none">dd7d079e-1b42-4be5-9391-128a2470ee0f</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-bold text-slate-400">Instituição:</p>
+                            <p className="text-[10px] font-bold text-slate-600 leading-none italic">Repasses Financeiros e Soluções Tecnológicas</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-10 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex gap-3 items-start">
+                        <div className="p-2 bg-white rounded-lg shadow-sm"><Icon name="wallet" size={16} color="#334155"/></div>
+                        <p className="text-[9px] text-slate-500 leading-tight font-medium">O valor do pagamento ficará disponível no menu Gerenciar carteira aqui no app do Revendedor O Boticário</p>
+                    </div>
+                </div>
+            );
+
+            const renderScreen = (item) => {
+                if (item?.figmaUrl) {
+                    const embedUrl = `https://www.figma.com/embed?embed_host=share&url=${encodeURIComponent(item.figmaUrl)}`;
+                    return <iframe className="w-full h-full border-none rounded-[30px]" src={embedUrl} allowFullScreen></iframe>;
+                }
+
+                if (item?.type === 'pix_flow') return <PixFlowDiscovery />;
+
+                const H = ({ t }) => <div className="p-3 border-b bg-white flex justify-between items-center sticky top-0 z-10 shrink-0 leading-none shadow-sm"><div className="flex items-center gap-2"><Icon name="arrow" color="#005f3f" size={12}/><span className="text-[10px] font-black uppercase text-slate-700 leading-none">{t}</span></div><Icon name="help" color="#005f3f" size={12}/></div>;
+
+                switch(item?.type) {
+                    case 'confirm_pay': return <div className="flex-1 bg-white flex flex-col leading-none animate-in"><H t="Confirmar" /><div className="p-5 space-y-6"><div className="space-y-1"><p className="text-[9px] font-bold text-slate-400 uppercase">Valor</p><p className="text-2xl font-black text-[#005f3f]">R$ 213,00</p></div><div className="p-4 bg-slate-50 rounded-2xl border border-slate-100"><p className="text-[9px] font-black text-slate-800 text-center uppercase">Boticário Produtos de Beleza</p></div><button className="w-full py-4 boti-bg text-white rounded-xl font-black text-[10px] uppercase shadow-lg mt-auto">Pagar Agora</button></div></div>;
+                    case 'gestao_btn': return <div className="flex-1 bg-white leading-none animate-in"><div className="p-4 flex items-center justify-between border-b bg-slate-50 leading-none"><Icon name="arrow" color="#005f3f" size={14}/><span className="text-[10px] font-black uppercase tracking-tight text-slate-800 leading-none">Cliente Brenno</span><Icon name="user" size={16} color="#005f3f"/></div><div className="p-4 space-y-4 leading-none"><div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm"><p className="text-[8px] font-bold opacity-40 uppercase mb-2">Pendente</p><div className="flex justify-between items-center leading-none"><span className="text-[10px] font-bold text-slate-500">Falta receber</span><span className="text-[11px] font-black text-red-600 italic leading-none font-black tracking-tight">R$ 784,21</span></div></div><button className="w-full py-4 boti-bg text-white rounded-2xl font-black text-[10px] uppercase shadow-lg flex items-center justify-center gap-2 animate-pulse"><Icon name="send" size={14}/> Cobrar via Pix</button></div></div>;
+                    case 'pay_detail': return <div className="flex-1 bg-white leading-none animate-in"><H t="Pedido" /><div className="p-5 space-y-6 leading-none"><div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm leading-none"><p className="text-lg font-black leading-none boti-green">R$ 206,15</p><p className="text-[8px] font-bold text-slate-400 uppercase mt-1 leading-none italic">Vencimento: 12/04</p></div><button className="w-full py-4 boti-bg text-white rounded-2xl font-black text-[10px] uppercase shadow-xl flex items-center justify-center gap-2 tracking-tighter leading-none px-3 text-center">Pagar com Carteira <Icon name="check" size={10} color="white"/></button></div></div>;
+                    case 'home_collect': return <div className="flex-1 bg-white flex flex-col p-5 space-y-6 animate-in"> <H t="Home" /><div className="space-y-4 leading-none"><div><p className="text-[8px] font-bold opacity-30 uppercase tracking-widest leading-none mb-1">Saldo em conta</p><p className="text-2xl font-black boti-green tracking-tighter leading-none">R$ 6.030,33</p></div><div className="space-y-2 leading-none"><button className="w-full py-4 boti-bg text-white rounded-2xl font-black text-[10px] uppercase shadow-lg flex items-center justify-center gap-2 leading-none"><Icon name="zap" size={14}/> Trazer Ganho</button><button className="w-full py-3 border-2 border-emerald-900 boti-green rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 italic leading-none font-black uppercase">Cobrar Cliente</button></div></div></div>;
+                    case 'progress': return <div className="flex-1 bg-white flex flex-col p-4 space-y-4 animate-in"> <H t="Meta" /><div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm space-y-2 mt-4 leading-none"><div className="flex justify-between items-center leading-none"><p className="text-[8px] font-black uppercase text-slate-700 leading-none">Boleto Ciclo 04</p><span className="text-[9px] font-black boti-green leading-none">80%</span></div><div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner"><div className="h-full boti-bg w-[80%] rounded-full shadow-lg"></div></div><p className="text-[7px] text-slate-400 font-medium italic leading-none">Faltam R$ 200,00</p></div></div>;
+                    case 'calc': return <div className="flex-1 bg-white flex flex-col animate-in"><H t="Calculadora" /><div className="p-5"> <div className="p-4 border-2 border-dashed border-emerald-300 bg-emerald-50/10 rounded-[2rem] space-y-4 leading-none"> <h4 className="text-[9px] font-black boti-green uppercase flex items-center gap-1 border-b pb-2 italic leading-none"><Icon name="calc" size={12}/> Organizar Venda</h4> <div className="flex justify-between items-center leading-none"><span className="text-[10px] font-black text-emerald-800 uppercase leading-none font-black">Seu Lucro:</span><span className="text-xl font-black text-emerald-800 leading-none tracking-tight">R$ 60,00</span></div> <button className="w-full py-3 boti-bg text-white rounded-xl font-black text-[8px] uppercase shadow-lg leading-none">Reservar Lucro</button> </div></div></div>;
+                    case 'edu_tips': return <div className="flex-1 bg-white flex flex-col p-3 animate-in leading-none"><H t="Dica" /><div className="h-44 bg-slate-900 rounded-[2.5rem] p-5 text-white relative overflow-hidden flex flex-col justify-end mt-4 shadow-xl border border-white/10"> <Icon name="calc" color="#10b981" size={70} className="absolute top-2 right-2 opacity-10 rotate-12"/><p className="text-[10px] font-black text-emerald-400 uppercase mb-2 italic leading-none">Dica Discovery</p><p className="text-[12px] font-black leading-tight italic font-black leading-none">Não misture o dinheiro pessoal com o da revenda!</p> </div></div>;
+                    default: return <div className="flex-1 flex items-center justify-center p-10 opacity-10 leading-none"><Icon name="user" size={60}/></div>;
+                }
+            };
+
+            const TaskCard = ({ item }) => {
+                const isEditing = editingId === item.id;
+                const isSelected = selectedId === item.id;
+                
+                return (
+                    <div 
+                        draggable={!isEditing}
+                        onDragStart={(e) => onDragStart(e, item.id)}
+                        onDragEnd={onDragEnd}
+                        onDragOver={(e) => onDragOver(e, item.responsible, item.id)}
+                        onClick={() => setSelectedId(item.id)}
+                        className={`bg-white p-5 rounded-[2.5rem] border-2 transition-all shadow-sm active:scale-95 flex flex-col h-fit animate-in ${isSelected ? 'card-active shadow-md' : 'border-slate-100 hover:border-slate-200'}`}
+                    >
+                        <div className="flex justify-between items-start mb-3 leading-none">
+                            <div className="flex items-center gap-2 leading-none">
+                                <span className="opacity-20 cursor-grab leading-none"><Icon name="grip" size={12}/></span>
+                                <span className={`text-[7px] font-black uppercase tracking-widest px-2 py-1 rounded-full leading-none ${isSelected ? 'bg-white text-emerald-800' : 'bg-slate-100 text-slate-400'}`}>#{item.id} • {item.priority}</span>
+                            </div>
+                            <div className="flex gap-2 leading-none items-center">
+                                <button onClick={(e) => { e.stopPropagation(); setEditingId(isEditing ? null : item.id); }} className="hover:scale-110 transition-transform">
+                                    <Icon name="edit" color={isEditing ? "#005f3f" : "#cbd5e1"} size={14}/>
+                                </button>
+                                {item.figmaUrl && <Icon name="figma" color="#4c51bf" size={14}/>}
+                                {item.status === "BLOQUEADO" ? <Icon name="lock" color={isSelected ? "#ef4444" : "#ef4444"} size={14}/> : <Icon name="zap" color={isSelected ? "#005f3f" : "#10b981"} size={14}/>}
+                            </div>
+                        </div>
+                        
+                        {isEditing ? (
+                            <input autoFocus className="font-extrabold text-[11px] leading-tight mb-3 uppercase tracking-tight text-slate-800 border-b-2 border-emerald-500 outline-none w-full" value={item.title} onClick={(e) => e.stopPropagation()} onChange={(e) => handleUpdateField(item.id, 'title', e.target.value)} />
+                        ) : (
+                            <h4 className="font-extrabold text-[12px] leading-tight mb-4 uppercase tracking-tight text-slate-800 leading-none">{item.title}</h4>
+                        )}
+                        
+                        <div className="p-3 bg-slate-50/80 rounded-2xl space-y-2 mb-4 leading-none">
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">Ação Squad:</p>
+                            {isEditing ? (
+                                <textarea className="text-[10px] font-bold text-slate-700 leading-snug italic bg-transparent border-none outline-none w-full resize-none" value={item.todo} rows={2} onClick={(e) => e.stopPropagation()} onChange={(e) => handleUpdateField(item.id, 'todo', e.target.value)} />
+                            ) : (
+                                <p className="text-[10px] font-bold text-slate-700 leading-snug italic leading-none">"{item.todo}"</p>
+                            )}
+                        </div>
+
+                        <div className="mt-auto pt-3 border-t border-slate-50 space-y-3 leading-none text-left">
+                            {item.dep !== "Nenhuma" && (
+                                <div className={`p-2 rounded-xl flex items-center gap-2 leading-none ${isSelected ? 'bg-white/10' : 'bg-red-50'}`}>
+                                    <Icon name="alert" color={isSelected ? "white" : "#ef4444"} size={12}/>
+                                    {isEditing ? (
+                                        <input className="text-[8px] font-black uppercase italic leading-none bg-transparent outline-none w-full text-red-700" value={item.dep} onClick={(e) => e.stopPropagation()} onChange={(e) => handleUpdateField(item.id, 'dep', e.target.value)} />
+                                    ) : (
+                                        <p className={`text-[8px] font-black uppercase italic leading-none ${isSelected ? 'text-white' : 'text-red-700'}`}>{item.dep}</p>
+                                    )}
+                                </div>
+                            )}
+                            
+                            <div className="flex flex-col gap-1">
+                                <p className={`text-[7px] font-black uppercase tracking-widest leading-none ${isSelected ? 'text-white/60' : 'text-slate-400'}`}>Impacto esperado:</p>
+                                {isEditing ? (
+                                    <input className="text-[9px] font-bold leading-none bg-transparent outline-none w-full border-b border-emerald-300 py-1 text-slate-800" value={item.data} onClick={(e) => e.stopPropagation()} onChange={(e) => handleUpdateField(item.id, 'data', e.target.value)} />
+                                ) : (
+                                    <p className={`text-[9px] font-bold uppercase tracking-tighter leading-none ${isSelected ? 'text-white' : 'text-[#005f3f]'}`}>{item.data}</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const StatusColumn = ({ title, color, responsible, icon }) => {
+                const items = data.filter(o => o.responsible === responsible);
+                const isActive = overColumn === responsible;
+                
+                return (
+                    <div 
+                        className={`flex-1 flex flex-col min-w-[300px] max-w-[400px] transition-all duration-200 rounded-t-[2.2rem] ${isActive ? 'drop-zone-active' : ''}`}
+                        onDragOver={(e) => onDragOver(e, responsible)}
+                        onDrop={(e) => onDrop(e, responsible)}
+                    >
+                        <div className={`p-4 rounded-t-[2.2rem] ${color} flex items-center justify-between mb-4 shadow-lg shrink-0 leading-none`}>
+                            <div className="flex items-center gap-3 leading-none">
+                                <div className="p-2 bg-white/20 rounded-xl leading-none"><Icon name={icon} color="white" size={18}/></div>
+                                <h3 className="font-black text-[11px] text-white uppercase tracking-[0.25em] leading-none">{title}</h3>
+                            </div>
+                            <span className="bg-white/20 px-3 py-1 rounded-full text-white font-black text-[10px] shadow-inner leading-none">{items.length}</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scroll pr-3 space-y-5 pb-32 pt-2">
+                            {items.map(o => <TaskCard key={o.id} item={o} />)}
+                            <div className="h-32 border-4 border-dashed border-slate-200 rounded-[2.5rem] flex items-center justify-center text-slate-300 text-[10px] font-black uppercase tracking-widest leading-none">Espaço livre</div>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="h-screen flex flex-col overflow-hidden bg-[#f1f5f9]">
+                    <header className="bg-white border-b border-slate-200 p-4 shrink-0 shadow-sm z-50 leading-none">
+                        <div className="max-w-screen-2xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 leading-none">
+                            <div className="flex items-center gap-4 leading-none">
+                                <div className="w-12 h-12 boti-bg rounded-2xl flex items-center justify-center text-white shadow-xl leading-none shadow-emerald-900/10"><Icon name="zap" size={24} color="white"/></div>
+                                <div>
+                                    <h1 className="text-xl font-black text-slate-800 tracking-tighter leading-none uppercase">PRIORIZAÇÃO SQUAD GESTÃO</h1>
+                                    <p className="text-[10px] font-black boti-green uppercase tracking-[0.25em] mt-1.5 italic leading-none">Unificado | Drag & Drop | Edição Live</p>
+                                </div>
+                            </div>
+                            <div className="bg-emerald-50 px-6 py-2.5 rounded-[1.5rem] border border-emerald-100 flex items-center gap-3 shadow-sm leading-none">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <p className="text-[10px] font-black boti-green uppercase leading-none tracking-widest italic leading-none">Outcome: 7% Engajamento RE</p>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 flex overflow-hidden">
+                        <div className="flex-1 overflow-hidden p-6 flex flex-col">
+                            <div className="flex-1 flex gap-10 overflow-x-auto custom-scroll pb-4">
+                                <StatusColumn title="🎯 Foco PM" color="bg-amber-600" responsible="PM" icon="user" />
+                                <StatusColumn title="🎨 Foco PD" color="bg-pink-600" responsible="PD" icon="arrow" />
+                                <StatusColumn title="🚀 Pronto p/ Dev" color="bg-emerald-600" responsible="DEV" icon="zap" />
+                            </div>
+                        </div>
+
+                        <div className="w-[380px] bg-white border-l border-slate-200 shrink-0 flex flex-col items-center justify-center p-8 relative shadow-2xl h-full">
+                            {selected ? (
+                                <div className="h-full w-full flex flex-col items-center animate-in min-h-0">
+                                    <div className="mb-8 text-center shrink-0">
+                                        <div className="flex items-center justify-center gap-2 mb-2 leading-none"><span className="text-[8px] font-black px-1.5 py-0.5 bg-slate-900 text-white rounded uppercase leading-none tracking-widest">SOLUÇÃO #{selected.id}</span><h3 className="text-sm font-black text-slate-800 tracking-tight leading-none uppercase">{selected.title}</h3></div>
+                                        <p className="text-[10px] text-[#005f3f] font-bold uppercase tracking-widest italic">{selected.status}</p>
+                                    </div>
+
+                                    <div className="phone-container shrink-0 leading-none scale-105">
+                                        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-3 bg-black rounded-full z-30 flex items-center justify-center leading-none"><div className="w-4 h-0.5 bg-zinc-900 rounded-full shadow-inner"></div></div>
+                                        <div className="phone-screen custom-scroll bg-slate-50">
+                                            {/* Header de sistema (não aparece no figma mas sim no discovery) */}
+                                            {!selected.figmaUrl && (
+                                                <div className="h-6 bg-white px-4 flex justify-between items-center text-[7px] font-black text-slate-800 shrink-0 sticky top-0 z-20 shadow-sm leading-none"><span>09:41</span><div className="flex gap-1.5 leading-none"><Icon name="send" size={8} color="black"/><Icon name="lock" size={8} color="black"/></div></div>
+                                            )}
+                                            {renderScreen(selected)}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="mt-auto w-full pt-8 space-y-4 leading-none shrink-0">
+                                        <div className="p-4 bg-slate-50 rounded-[2rem] w-full border border-slate-100 flex items-center gap-4 shadow-sm leading-none">
+                                            <div className="p-3 boti-bg rounded-2xl text-white shadow-lg leading-none shadow-emerald-900/10"><Icon name="help" size={20}/></div>
+                                            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Impacto</p><p className="text-[11px] font-black text-slate-800 leading-tight uppercase italic font-black uppercase leading-none tracking-tight">{selected.data}</p></div>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-slate-200 font-black text-[8px] uppercase tracking-[0.4em] justify-center italic pt-2 border-t border-slate-50 leading-none w-full"><Icon name="check" size={10} color="#e2e8f0"/> Discovery App Suggestion</div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center opacity-40 animate-pulse space-y-8 leading-none">
+                                    <div className="w-24 h-24 bg-slate-50 rounded-[3rem] flex items-center justify-center mx-auto text-slate-300 mb-6 shadow-inner border border-slate-100 leading-none"><Icon name="user" size={48}/></div>
+                                    <div><h3 className="font-black text-slate-800 text-xs tracking-[0.25em] uppercase mb-3 leading-none text-center">Dashboard Live</h3><p className="text-[10px] text-slate-400 max-w-[180px] mx-auto leading-relaxed font-black uppercase italic leading-none text-center leading-none">Clique num card para gerenciar a squad ou visualizar a solução sugerida</p></div>
+                                </div>
+                            )}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
